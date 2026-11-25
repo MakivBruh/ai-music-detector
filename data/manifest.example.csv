@@ -1,0 +1,7 @@
+path,label,group_id,split,source,generator
+raw/human_train.wav,0,composition_001,train,licensed_collection,human
+raw/ai_train.wav,1,prompt_family_001,train,documented_generator,generator_a
+raw/human_val.wav,0,composition_002,val,licensed_collection,human
+raw/ai_val.wav,1,prompt_family_002,val,documented_generator,generator_a
+raw/human_test.wav,0,composition_003,test,licensed_collection,human
+raw/ai_test.wav,1,prompt_family_003,test,documented_generator,generator_b
