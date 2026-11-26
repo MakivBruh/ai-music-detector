@@ -1,0 +1,21 @@
+{
+  "manifests": [
+    "/content/work/musebench/manifest-musebench.csv",
+    "/content/ai-music-detector/data/manifest-28000.csv"
+  ],
+  "seed": 42,
+  "max_tracks": null,
+  "max_segments": 6,
+  "augment_variants": 3,
+  "float16": true,
+  "path_map": [
+    [
+      "C:/Users/makiv/OneDrive/Documents/Coding/projek/dataset/fake_songs",
+      "/content/work/data/fake_songs/fake_songs"
+    ],
+    [
+      "C:/Users/makiv/Music/FMA/fma_small",
+      "/content/work/data/fma_small/fma_small"
+    ]
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "sample_rate": 16000,
+  "seconds": 5.0,
+  "n_fft": 1024,
+  "hop_length": 256,
+  "n_mels": 64,
+  "canonical_mp3": false,
+  "loudness_norm": true,
+  "fmax": 7000.0
+}

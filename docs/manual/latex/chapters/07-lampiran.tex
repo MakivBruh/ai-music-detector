@@ -1,0 +1,118 @@
+\chapter*{LAMPIRAN}
+\addcontentsline{toc}{chapter}{LAMPIRAN}
+
+\section*{Lampiran A. Struktur Folder Proyek}
+\addcontentsline{toc}{section}{Lampiran A. Struktur Folder Proyek}
+Kode sumber lengkap tersedia di \url{\RepoURL}.
+
+{\singlespacing\small
+\begin{longtable}{L{5.3cm} L{7.0cm}}
+\toprule
+Path & Isi\\
+\midrule
+\endfirsthead
+\toprule
+Path & Isi\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\kode{hmf/audio.py} & Dekode, augmentasi codec, normalisasi loudness, spektrogram log-Mel\\
+\kode{hmf/prepare.py} & Membuat cache fitur dari manifest (augmentasi, cicilan, duplikat)\\
+\kode{hmf/train.py} & Pelatihan CNN, \textit{balanced sampler}, metrik per generator, lanjutan pelatihan\\
+\kode{hmf/model.py} & Arsitektur CNN\\
+\kode{hmf/predict.py} & Analisis satu file dan ringkasan model\\
+\kode{hmf/web.py},\newline \kode{hmf/studio.html} & Server dan halaman studio web\\
+\kode{hmf/feedback.py} & Umpan balik pengguna: simpan, ringkas, dan ekspor\\
+\kode{hmf/manifest.py} & Manifest MUSEBENCH dan \textit{leave-one-generator-out}\\
+\kode{hmf/evaluate\_folder.py} & Evaluasi OOD dan uji \textit{robustness}\\
+\kode{hmf/finalize.py} & Membuat \kode{report.json} untuk run yang terhenti\\
+\kode{scripts/musebench\_index.py} & Memetakan dan mengunduh sebagian isi MUSEBENCH\\
+\kode{colab/train.ipynb} & Notebook pelatihan di Google Colab\\
+\kode{tests/} & Tes otomatis (pytest)\\
+\kode{runs/hmf-aug-v2/} & Model final siap pakai: \kode{best.pt}, \kode{report.json}, \kode{history.json}, dan konfigurasi (Tabel~\ref{tab:file-model})\\
+\kode{docs/manual/} & Buku manual ini beserta sumber LaTeX-nya\\
+\end{longtable}}
+
+\section*{Lampiran B. Daftar Perintah}
+\addcontentsline{toc}{section}{Lampiran B. Daftar Perintah}
+Di Windows, ganti \kode{python} dengan \kode{.\textbackslash.venv\textbackslash Scripts\textbackslash python.exe}.
+\begin{Perintah}
+# Jalankan tes otomatis
+python -m pytest -q
+# Studio web
+python -m hmf.web --run runs/<nama> --port 8765
+# Analisis satu file di terminal
+python -m hmf.predict --run runs/<nama> --audio lagu.mp3
+# Evaluasi OOD dan robustness
+python -m hmf.evaluate_folder --run runs/<nama> \
+    --ai <folder> --human <folder>
+# Manifest MUSEBENCH dan leave-one-generator-out
+python -m hmf.manifest musebench --root <folder>
+python -m hmf.manifest logo --manifest <a.csv> <b.csv> \
+    --holdout musicgen --output <logo.csv>
+# Cache fitur dan pelatihan
+python -m hmf.prepare --manifest <csv> --output <cache> ...
+python -m hmf.train --cache <cache> --output runs/<nama> ...
+# Lanjutkan pelatihan yang terhenti / report.json sementara
+python -m hmf.train --cache <cache> --output runs/<nama> --resume ...
+python -m hmf.finalize --cache <cache> --run runs/<nama>
+# Umpan balik pengguna
+python -m hmf.feedback report --csv laporan.csv
+python -m hmf.feedback export --run <nama> --only-wrong --ood data/ood
+\end{Perintah}
+
+\section*{Lampiran C. Contoh Laporan JSON}
+\addcontentsline{toc}{section}{Lampiran C. Contoh Laporan JSON}
+Keluaran model final pada berkas demo sintetis 8 detik dari repositori, dihasilkan dengan perintah berikut. Laporan yang diunduh dari studio juga memuat daftar \kode{segment\_scores}.
+\begin{Perintah}
+python -m hmf.predict --run runs/hmf-aug-v2 \
+    --audio data/demo/test_1_0.wav
+\end{Perintah}
+\begin{Perintah}
+{
+  "status": "completed",
+  "filename": "test_1_0.wav",
+  "analysis_level": "track_classification",
+  "result": {
+    "verdict": "Human",
+    "ai_score": 4.514792272083956e-05,
+    "decision_threshold": 0.5,
+    "aggregation": "mean_segment_score",
+    "segment_seconds": 5.0,
+    "segments_analyzed": 2
+  },
+  "metadata": {
+    "model": "frequency_cnn",
+    "models_used": 1,
+    "run": "hmf-aug-v2",
+    "processing_time_seconds": 20.916
+  }
+}
+\end{Perintah}
+
+\section*{Lampiran D. Sumber Data, Tautan, dan Lisensi}
+\addcontentsline{toc}{section}{Lampiran D. Sumber Data, Tautan, dan Lisensi}
+Dataset yang dipakai melatih model final:
+\begin{itemize}
+\item SONICS: \url{https://arxiv.org/pdf/2408.14080} (makalah ICLR 2025: \url{https://iclr.cc/virtual/2025/poster/32089})
+\item FMA (Free Music Archive): \url{https://github.com/mdeff/fma}
+\item MUSEBENCH: \url{https://arxiv.org/abs/2610.20310}
+\end{itemize}
+Dataset dan penelitian terkait lainnya:
+\begin{itemize}
+\item FakeMusicCaps: \url{https://arxiv.org/html/2409.10684v2}
+\item Improved robustness in AI-generated music detection (Suno v5): \url{https://arxiv.org/html/2607.27454}
+\item The AI Music Arms Race (TISMIR): \url{https://transactions.ismir.net/articles/10.5334/tismir.254}
+\item Echoes dataset: \url{https://arxiv.org/pdf/2603.23667}
+\item Hard-negative robustness task: \url{https://arxiv.org/pdf/2608.14916}
+\item Broadcast monitoring evaluation: \url{https://arxiv.org/pdf/2608.07359}
+\item Stem-agnostic hybrid AI music detection: \url{https://arxiv.org/pdf/2609.26956}
+\end{itemize}
+Lisensi:
+\begin{itemize}
+\item MUSEBENCH: secara umum CC BY-SA 3.0; lagu Jamendo mengikuti lisensi per lagu; keluaran generator umumnya untuk keperluan nonkomersial.
+\item SONICS dan FMA mengikuti lisensi masing-masing dataset.
+\item Audio dataset tidak didistribusikan ulang bersama kode; repositori hanya berisi kode, manifest, dan dokumentasi.
+\item Model dilatih dari bobot acak tanpa bobot pralatih.
+\end{itemize}

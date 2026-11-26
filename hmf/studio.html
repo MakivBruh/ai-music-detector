@@ -327,6 +327,13 @@ const percent = (value, threshold) => {
   }
   return fixed(shown) + '%';
 };
+// A share such as accuracy, one decimal with a decimal comma; 558 of 559 must read 99,8%, never 100%.
+const share = v => {
+  let shown = Math.round(v * 1000) / 10;
+  if (v < 1 && shown >= 100) shown = 99.9;
+  if (v > 0 && shown <= 0) shown = 0.1;
+  return shown.toLocaleString('id-ID', {maximumFractionDigits: 1}) + '%';
+};
 const clock = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 let file, report, result, audioUrl, jsonUrl, busy = false, selected = 0, fieldSummary;
 
@@ -583,7 +590,7 @@ function drawGenerators() {
     el('rect', {x: L, y: y + 4, width: W - L - R, height: 16, fill: css('--line-soft'), rx: 4}, svg);
     el('path', {d: `M${L},${y + 4}H${L + bw - 4}Q${L + bw},${y + 4} ${L + bw},${y + 8}V${y + 16}Q${L + bw},${y + 20} ${L + bw - 4},${y + 20}H${L}Z`,
       fill: css(r.kind === 'ai' ? '--ai' : '--human')}, svg);
-    el('text', {x: W - R + 8, y: y + 16, class: 'axis-text', fill: css('--ink')}, svg).textContent = Math.round(r.accuracy * 100) + '%';
+    el('text', {x: W - R + 8, y: y + 16, class: 'axis-text', fill: css('--ink')}, svg).textContent = share(r.accuracy);
     const hit = el('rect', {x: 0, y, width: W, height: row, fill: 'transparent'}, svg);
     hit.addEventListener('mousemove', ev => {
       const b = svg.getBoundingClientRect();
@@ -594,12 +601,12 @@ function drawGenerators() {
   });
 }
 function renderModel() {
-  const t = summary.test || {}, pct = v => v == null ? '–' : Math.round(v * 1000) / 10 + '%';
+  const t = summary.test || {}, pct = v => v == null ? '–' : share(v);
   byId('modelChip').innerHTML = `Model aktif: <b></b>`; byId('modelChip').querySelector('b').textContent = summary.run;
   byId('stats').innerHTML = [
     ['Akurasi test', pct(t.accuracy)], ['Balanced accuracy', pct(t.balanced_accuracy)],
     ['ROC AUC', t.roc_auc == null ? '–' : t.roc_auc.toLocaleString('id-ID', {maximumFractionDigits: 3})],
-    [`Lagu test (${summary.test_tracks.human} manusia, ${summary.test_tracks.ai} AI)`,
+    [`Lagu test (${summary.test_tracks.human.toLocaleString('id-ID')} manusia, ${summary.test_tracks.ai.toLocaleString('id-ID')} AI)`,
       (summary.test_tracks.human + summary.test_tracks.ai).toLocaleString('id-ID')],
   ].map(([k, v]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
   const a = summary.audio_config || {};

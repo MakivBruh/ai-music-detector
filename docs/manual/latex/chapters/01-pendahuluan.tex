@@ -1,0 +1,78 @@
+\chapter{PENDAHULUAN}
+
+\section{Latar Belakang}
+
+Generator musik berbasis teks seperti Suno, Udio, dan MusicGen membuat siapa pun bisa menghasilkan lagu lengkap dalam hitungan menit. Banjir karya baru ini memunculkan kebutuhan untuk mengetahui apakah sebuah rekaman dibuat manusia atau dihasilkan AI, misalnya oleh kurator lomba, pengelola katalog musik, pendidik, dan pendengar.
+
+\textit{AI Music Detector} adalah aplikasi lokal yang memperkirakan apakah sebuah rekaman musik dibuat manusia (label 0) atau dihasilkan AI (label 1). Model yang dipakai adalah \textit{Convolutional Neural Network} (CNN) yang dilatih dari bobot acak pada spektrogram log-Mel, tanpa API eksternal dan tanpa bobot pralatih.
+
+Tantangan utamanya adalah data. Pada dataset publik, lagu AI dan lagu manusia sering berasal dari sumber dengan format berbeda: lagu AI berupa MP3 berkualitas rendah, sedangkan lagu manusia berupa MP3 berkualitas tinggi. Model yang dilatih begitu saja dapat belajar membedakan kualitas file, bukan asal-usul musik, sehingga lagu manusia yang dikompres ulang ikut divonis AI. Gejala ini dikenal sebagai \textit{shortcut learning} \cite{geirhos2020shortcut}. Buku ini menjelaskan model final \kode{hmf-aug-v2} yang dirancang untuk menghindari jalan pintas tersebut, cara memakai aplikasinya, dan bukti pengujiannya.
+
+\section{Rumusan Masalah}
+\begin{enumerate}
+\item Bagaimana membangun detektor musik AI yang tidak bergantung pada format dan kualitas file audio?
+\item Seberapa akurat detektor tersebut pada data test, dan apakah vonisnya tetap sama ketika lagu dikompres ulang?
+\item Bagaimana menyajikan hasil deteksi secara transparan kepada pengguna, termasuk bagian lagu yang mendorong vonis?
+\end{enumerate}
+
+\section{Tujuan}
+\begin{enumerate}
+\item Membangun aplikasi \textit{AI Music Detector} yang berjalan lokal di komputer pengguna.
+\item Menghilangkan \textit{shortcut learning} terhadap codec dengan augmentasi codec, normalisasi loudness, dan pembatasan pita frekuensi.
+\item Mengukur kinerja model dengan \textit{hold-out test}, uji \textit{robustness}, dan evaluasi per generator.
+\item Menyusun panduan penggunaan, pelatihan ulang, dan pengujian yang dapat diulang oleh orang lain.
+\end{enumerate}
+
+\section{Manfaat}
+Manfaat utamanya adalah penyaringan awal yang cepat, gratis, dan dapat diperiksa: setiap vonis datang bersama bukti per 5 detik, bukan sekadar satu angka.
+\begin{itemize}
+\item \textbf{Bagi pengguna:} satu lagu 3 menit dianalisis dalam hitungan detik di laptop biasa tanpa GPU dan tanpa internet. Audio tidak keluar dari komputer pengguna, sehingga aman untuk karya yang belum dirilis.
+\item \textbf{Bagi dunia akademik:} menunjukkan secara terukur bahwa detektor bisa ``curang'' dengan membaca kualitas file, serta menyediakan metode uji yang dapat diulang: uji \textit{robustness}, \textit{leave-one-generator-out}, dan pembagian data per kelompok lagu.
+\item \textbf{Bagi industri musik:} membantu kurator dan pengelola katalog menandai karya yang perlu diperiksa, termasuk karya campuran yang hanya sebagian dibuat AI.
+\item \textbf{Bagi masyarakat:} mendukung transparansi tentang asal-usul musik dan menjadi bahan literasi digital tentang batas kemampuan detektor AI.
+\end{itemize}
+
+\section{Sasaran Pengguna}
+Alat ini ditujukan bagi orang yang perlu menyaring rekaman musik sebelum mengambil keputusan, bukan untuk memberi putusan akhir. Tabel~\ref{tab:pengguna} merangkum kelompok pengguna dan cara mereka memakai alat ini.
+
+{\singlespacing\small
+\begin{longtable}{L{2.4cm} L{3.2cm} L{3.2cm} L{3.2cm}}
+\caption{Sasaran pengguna dan cara memakai alat.}\label{tab:pengguna}\\
+\toprule
+Pengguna & Kebutuhan & Cara memakai & Yang perlu diperhatikan\\
+\midrule
+\endfirsthead
+\toprule
+Pengguna & Kebutuhan & Cara memakai & Yang perlu diperhatikan\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Kurator dan penyelenggara lomba & Memastikan karya sesuai aturan, misalnya wajib buatan manusia & Menyaring karya berskor tinggi untuk diperiksa ulang secara manual & Skor tinggi adalah alasan memeriksa, bukan alasan mendiskualifikasi\\
+Label dan pengelola katalog & Mengetahui proporsi musik AI di katalog & Menganalisis banyak file, lalu menelaah segmen berskor tinggi & Model perlu dilatih ulang saat generator baru muncul\\
+Musisi dan produser & Membuktikan karya buatan sendiri & Melihat grafik skor per segmen dan spektrogram & Rekaman berkualitas rendah dapat memperoleh skor lebih tinggi\\
+Pendidik & Memeriksa keaslian tugas komposisi & Memakai skor sebagai bahan diskusi & Gabungkan dengan file proyek atau proses kerja siswa\\
+Jurnalis dan pemeriksa fakta & Menilai rekaman viral yang diduga AI & Membaca skor bersama sumber lain & Hasil satu alat tidak cukup sebagai dasar berita\\
+Peneliti dan mahasiswa & Mempelajari deteksi audio sintetis & Melatih ulang, uji \textit{robustness}, \textit{leave-one-generator-out} & Laporkan data, seed, dan versi kode\\
+Pendengar umum & Ingin tahu asal-usul lagu & Mengunggah lagu dan membaca vonis beserta grafiknya & Skor adalah perkiraan, bukan label resmi\\
+\end{longtable}}
+
+\section{Ruang Lingkup dan Batasan}
+\begin{itemize}
+\item \textbf{Masukan:} satu file audio (MP3, WAV, FLAC, M4A, OGG, dan format lain yang dapat dibaca ffmpeg), maksimal 32 MB.
+\item \textbf{Keluaran:} vonis AI atau Human, skor AI 0--100\%, skor setiap segmen 5 detik, dan laporan JSON.
+\item \textbf{Kelas:} hanya dua kelas. Lagu campuran manusia dan AI belum menjadi kelas tersendiri.
+\item \textbf{Privasi:} semua proses berjalan di komputer pengguna; audio tidak dikirim ke layanan mana pun.
+\item \textbf{Batasan utama:} skor adalah perkiraan pola statistik dari data latih, bukan bukti asal-usul sebuah karya.
+\end{itemize}
+
+\section{Kode Sumber}
+Seluruh kode sumber, notebook pelatihan, tes otomatis, dan buku manual ini terbuka untuk umum di repositori GitHub berikut:
+\begin{center}
+\url{\RepoURL}
+\end{center}
+Kode dapat diunduh dengan perintah di bawah, kemudian dipasang mengikuti Subbab~\ref{sec:instalasi}. Dataset audio tidak disertakan di repositori karena terikat lisensi masing-masing; tautan unduhannya ada di Lampiran~D.
+\begin{Perintah}
+git clone https://github.com/MakivBruh/ai-music-detector.git
+cd ai-music-detector
+\end{Perintah}

@@ -4,6 +4,13 @@ __pycache__/
 data/raw/
 data/cache*/
 data/demo*/
-runs/
 *.pt
 data/feedback/
+
+# Folder runs: hanya file yang dibutuhkan untuk menjalankan model.
+!runs/*/best.pt
+runs/*/cache_index.json
+runs/*/data_index.json
+runs/*/last.pt
+runs/*/manifest-28000.csv
+runs/*/robustness-test-split/

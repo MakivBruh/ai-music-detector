@@ -1,0 +1,243 @@
+\chapter{METODE}
+
+\section{Peta Metode}
+Penelitian ini adalah penelitian eksperimental kuantitatif: model dilatih pada data yang dibagi per kelompok lagu, lalu kinerjanya diukur dengan metrik yang ditetapkan sebelum melihat hasil. Pekerjaannya berjalan dalam sembilan tahap, dan setiap tahap memakai metode (Gambar~\ref{fig:peta-metode} dan Tabel~\ref{tab:peta-metode}).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  tahap/.style={draw=garis, rounded corners=3pt, minimum height=1.75cm, align=center, text width=3.9cm, font=\small},
+  panah/.style={-{Stealth[length=2.2mm]}, draw=abu, thick}]
+\node[tahap] (s1) at (0,0)    {\textbf{1. Pengumpulan data}\\[1pt]{\footnotesize Data acquisition;\\provenance-based labeling}};
+\node[tahap] (s2) at (4.6,0)  {\textbf{2. Pembagian data}\\[1pt]{\footnotesize Grouped hold-out split;\\exact deduplication}};
+\node[tahap] (s3) at (9.2,0)  {\textbf{3. Pra-pemrosesan}\\[1pt]{\footnotesize Resampling;\\windowing 5 detik;\\RMS normalization}};
+\node[tahap] (s4) at (0,-2.3)   {\textbf{4. Augmentasi (train)}\\[1pt]{\footnotesize Codec augmentation;\\mitigasi shortcut learning}};
+\node[tahap] (s5) at (4.6,-2.3) {\textbf{5. Ekstraksi fitur}\\[1pt]{\footnotesize Log-Mel spectrogram;\\band-limiting 0--7 kHz}};
+\node[tahap] (s6) at (9.2,-2.3) {\textbf{6. Pelatihan}\\[1pt]{\footnotesize CNN, AdamW;\\early stopping;\\class-balanced sampling}};
+\node[tahap] (s7) at (0,-4.6)   {\textbf{7. Evaluasi model}\\[1pt]{\footnotesize Hold-out test, ROC AUC;\\robustness, OOD, LOGO}};
+\node[tahap] (s8) at (4.6,-4.6) {\textbf{8. Implementasi}\\[1pt]{\footnotesize Studio web lokal;\\score aggregation;\\ambang 0,5}};
+\node[tahap] (s9) at (9.2,-4.6) {\textbf{9. Pengujian}\\[1pt]{\footnotesize Unit testing;\\black-box testing;\\field test, interval Wilson}};
+\draw[panah] (s1) -- (s2); \draw[panah] (s2) -- (s3);
+\draw[panah] (s3.south) -- ++(0,-0.37) -| (s4.north);
+\draw[panah] (s4) -- (s5); \draw[panah] (s5) -- (s6);
+\draw[panah] (s6.south) -- ++(0,-0.37) -| (s7.north);
+\draw[panah] (s7) -- (s8); \draw[panah] (s8) -- (s9);
+\end{tikzpicture}
+\caption{Sembilan tahap penelitian.}
+\label{fig:peta-metode}
+\end{figure}
+
+{\singlespacing\small
+\begin{longtable}{L{3.1cm} L{7.0cm} L{2.0cm}}
+\caption{Tahap penelitian, nama metode, dan bagian rinciannya.}\label{tab:peta-metode}\\
+\toprule
+Tahap & Nama metode & Rincian\\
+\midrule
+\endfirsthead
+\toprule
+Tahap & Nama metode & Rincian\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1. Pengumpulan data & Data acquisition; provenance-based labeling; random sampling dengan seed & Subbab~\ref{sec:data}\\
+2. Pembagian data & Grouped hold-out split (train : validation : test); exact deduplication SHA-256 & Subbab~\ref{sec:split}\\
+3. Pra-pemrosesan & Downmixing ke mono; resampling 16 kHz; fixed-length windowing 5 detik; RMS loudness normalization & Subbab~\ref{sec:prapemrosesan}\\
+4. Augmentasi (hanya train) & Data augmentation berupa codec augmentation, untuk mitigasi shortcut learning & Subbab~\ref{sec:perbaikan}\\
+5. Ekstraksi fitur & Log-Mel spectrogram (STFT + Mel filterbank); band-limiting 0--7 kHz & Subbab~\ref{sec:prapemrosesan}\\
+6. Pelatihan & Supervised learning dengan CNN; mini-batch gradient descent (AdamW); class-balanced sampling; mixed precision; early stopping; model checkpointing & Subbab~\ref{sec:pelatihan}\\
+7. Evaluasi model & Hold-out test evaluation; disaggregated evaluation; robustness testing; OOD evaluation; leave-one-generator-out; comparative evaluation terhadap baseline & Subbab~\ref{sec:rancangan-evaluasi}\\
+8. Implementasi & Aplikasi web lokal; score aggregation (mean pooling); fixed decision threshold & Bab~\ref{bab:panduan}\\
+9. Pengujian aplikasi dan lapangan & Unit testing; black-box testing; field test dengan human-in-the-loop feedback; Wilson score interval & Subbab~\ref{sec:rancangan-pengujian}\\
+\end{longtable}}
+
+Urutan sebenarnya di kode untuk lagu train adalah: audio didekode, diberi augmentasi codec, dijadikan mono 16 kHz, dipotong per 5 detik, dinormalisasi RMS, lalu diubah menjadi spektrogram log-Mel. Tahap 3 dan 4 dipisah pada peta di atas supaya mudah dijelaskan.
+
+\section{Data}\label{sec:data}
+Data latih dikumpulkan dari tiga sumber (Tabel~\ref{tab:sumber-data}). Label manusia atau AI ditentukan dari asal-usul data (\textit{provenance-based labeling}), bukan dari tebakan pendengaran. Subset MUSEBENCH dipilih acak dengan seed 42 sehingga pemilihannya dapat diulang.
+
+\begin{table}[htbp]
+\centering
+\singlespacing\small
+\caption{Sumber data latih.}
+\label{tab:sumber-data}
+\begin{tabularx}{\textwidth}{Y L{1.6cm} L{2.4cm} L{3.4cm}}
+\toprule
+Sumber & Kelas & Jumlah lagu & Format\\
+\midrule
+SONICS (Suno chirp v2/v3/v3.5, Udio) \cite{rahman2025sonics} & AI & 20.000 & MP3 kualitas rendah\\
+FMA-small \cite{defferrard2017fma} & Manusia & 7.997 & MP3 $\pm$300 kbps, 44,1 kHz\\
+MUSEBENCH Jamendo dan OOD FMA \cite{musebench} & Manusia & 3.689 & MP3\\
+MUSEBENCH: MusicGen, AudioLDM, Riffusion, JASCO, Magenta, Stable Audio \cite{musebench} & AI & 4.080 (680 per generator) & WAV 32 kHz\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Tautan unduhan setiap dataset tercantum pada Lampiran~D.
+
+\section{Pembagian Data}\label{sec:split}
+Data dibagi dengan \textit{hold-out validation} tiga bagian (\textit{train}--\textit{validation}--\textit{test split}) yang dilakukan per kelompok lagu (\textit{grouped hold-out split}). Lagu Jamendo dan semua versi AI yang dibuat dari lagu itu berada di satu kelompok, dan satu kelompok tidak pernah terbelah ke dua bagian. Cara ini mencegah \textit{data leakage}. File yang byte-identik dari dua sumber hanya disimpan sekali (\textit{exact deduplication} dengan hash SHA-256).
+
+\begin{table}[htbp]
+\centering
+\singlespacing\small
+\caption{Rasio pembagian data per sumber.}
+\label{tab:rasio}
+\begin{tabularx}{\textwidth}{L{3.6cm} L{3.4cm} Y}
+\toprule
+Sumber data & Train : validation : test & Cara pembagian\\
+\midrule
+SONICS + FMA-small & 82,4 : 7,6 : 10,0 & \textit{Predefined split}, mengikuti pembagian resmi dataset SONICS\\
+MUSEBENCH & 70 : 15 : 15 & \textit{Grouped random split} berbasis hash SHA-256 dari \kode{group\_id} dan seed 42\\
+Gabungan (data final) & 79,9 : 9,1 : 10,9 & 28.587 : 3.268 : 3.911 lagu\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textit{K-fold cross-validation} tidak dipakai karena melatih model berkali-kali dengan $\pm$36.000 lagu dan $\pm$500.000 segmen train terlalu mahal untuk kuota GPU Google Colab. Dengan data sebanyak ini, satu \textit{hold-out test} berisi 3.911 lagu sudah memberi estimasi yang stabil. Generalisasi ke generator baru diuji dengan \textit{leave-one-generator-out} (Subbab~\ref{sec:rancangan-evaluasi}).
+
+\section{Pra-pemrosesan dan Ekstraksi Fitur}\label{sec:prapemrosesan}
+Setiap rekaman dipotong menjadi segmen 5 detik, setiap segmen diubah menjadi spektrogram log-Mel, CNN memberi skor AI per segmen, lalu skor dirata-ratakan menjadi satu vonis (Gambar~\ref{fig:alur}).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  kotak/.style={draw=garis, rounded corners=3pt, minimum height=1.3cm, align=center, text width=2.85cm, font=\small},
+  panah/.style={-{Stealth[length=2.2mm]}, draw=abu, thick}]
+\node[kotak] (a1) at (0,0)    {\textbf{Berkas audio}\\{\footnotesize MP3, WAV, FLAC}};
+\node[kotak] (a2) at (3.45,0) {\textbf{Dekode}\\{\footnotesize mono, 16 kHz}};
+\node[kotak] (a3) at (6.9,0)  {\textbf{Potong 5 detik}\\{\footnotesize normalisasi RMS}};
+\node[kotak] (a4) at (10.35,0){\textbf{Log-Mel 64 bin}\\{\footnotesize 0--7 kHz, dB tetap}};
+\node[kotak] (b1) at (0,-2.2)    {\textbf{CNN 3 blok}\\{\footnotesize 16, 32, 64 kanal}};
+\node[kotak] (b2) at (3.45,-2.2) {\textbf{Skor per segmen}\\{\footnotesize peluang kelas AI}};
+\node[kotak] (b3) at (6.9,-2.2)  {\textbf{Rata-rata}\\{\footnotesize semua segmen}};
+\node[kotak, draw=aksen, fill=aksen!10, line width=1pt] (b4) at (10.35,-2.2) {\textbf{Vonis}\\{\footnotesize AI jika $\ge$ 0,5}};
+\node[draw=garis, dashed, rounded corners=3pt, fill=black!4, font=\footnotesize, align=center] (catatan) at (5.17,1.45) {Hanya saat training: augmentasi codec acak untuk kedua kelas};
+\draw[panah] (a1) -- (a2); \draw[panah] (a2) -- (a3); \draw[panah] (a3) -- (a4);
+\draw[panah] (a4.south) -- ++(0,-0.3) -| (b1.north);
+\draw[panah] (b1) -- (b2); \draw[panah] (b2) -- (b3); \draw[panah] (b3) -- (b4);
+\draw[abu, dashed] (catatan.south) -- (5.17,0);
+\end{tikzpicture}
+\caption{Alur analisis dari berkas audio sampai vonis.}
+\label{fig:alur}
+\end{figure}
+
+Rinciannya sama untuk pelatihan dan analisis di studio:
+\begin{itemize}
+\item audio didekode, dijadikan mono (\textit{downmixing}), dan di-\textit{resample} ke 16 kHz;
+\item rekaman dibaca per jendela 5 detik tanpa tumpang tindih (\textit{fixed-length windowing}); potongan terakhir yang pendek diisi nol;
+\item RMS setiap jendela disetel ke $-20$ dBFS (\textit{loudness normalization}), sehingga keras-pelannya rekaman tidak menjadi petunjuk;
+\item spektrogram log-Mel 64 pita, FFT 1024, \textit{hop} 256, rentang 0--7 kHz, skala dB tetap ($-80$ sampai $+20$ dB) tanpa normalisasi berbasis dataset.
+\end{itemize}
+
+\section{Perbaikan terhadap Shortcut Learning}\label{sec:perbaikan}
+Data latih menyimpan beberapa perbedaan teknis antara kelas AI dan manusia yang dapat dijadikan jalan pintas oleh model. Tabel~\ref{tab:perbaikan} merangkum perbedaan tersebut, cara mencegahnya, dan opsi perintah yang mengaktifkannya.
+
+{\singlespacing\small
+\begin{longtable}{L{3.1cm} L{6.3cm} L{2.9cm}}
+\caption{Potensi jalan pintas pada data dan cara mencegahnya.}\label{tab:perbaikan}\\
+\toprule
+Potensi jalan pintas & Pencegahan & Opsi perintah\\
+\midrule
+\endfirsthead
+\toprule
+Potensi jalan pintas & Pencegahan & Opsi perintah\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Codec dan bitrate berbeda per kelas & Setiap lagu train (kedua kelas) dibuat 3 versi dengan rantai acak: MP3/AAC/Opus/PCM 32--320 kbps, \textit{resample} 16--48 kHz, mono/stereo, gain $-12$ sampai $+4$ dB, lowpass acak 4--7,9 kHz & \kode{--augment-variants 3}\\
+Pita di atas 7,3 kHz hanya ada pada lagu manusia & Spektrogram dibatasi 0--7 kHz (\textit{band-limiting}), sebab augmentasi tidak dapat menambah bandwidth ke lagu AI & \kode{--fmax 7000}\\
+Keras-pelan rekaman & Normalisasi RMS per jendela & \kode{--loudness-norm}\\
+Kelas tidak seimbang & \textit{Weighted random sampling}: setiap kelas, dan setiap generator di dalamnya, mendapat porsi sampel sama & \kode{--balance sampler --balance-by generator}\\
+Hanya dua generator AI & Data tambahan MUSEBENCH: Jamendo, OOD FMA, dan enam generator lain & \kode{hmf.manifest musebench}\\
+\end{longtable}}
+
+Rantai augmentasi ditentukan oleh seed, hash SHA-256 file, dan nomor varian, sehingga hasilnya dapat diulang. Data validation dan test tidak diaugmentasi agar evaluasinya bersih.
+
+\section{Model dan Pelatihan}\label{sec:pelatihan}
+Model adalah CNN tiga blok konvolusi (16, 32, dan 64 kanal), masing-masing konvolusi $3\times3$, ReLU, dan \textit{max-pooling} $2\times2$. Varian \kode{frequency} mempertahankan 8 posisi frekuensi saat \textit{pooling}, lalu dropout 0,2 dan lapisan linear ke dua kelas. Keluaran softmax kelas AI menjadi skor segmen. Pengaturan pelatihan dirangkum pada Tabel~\ref{tab:hyper}.
+
+\begin{table}[htbp]
+\centering
+\singlespacing\small
+\caption{Pengaturan pelatihan model final.}
+\label{tab:hyper}
+\begin{tabularx}{\textwidth}{L{4.6cm} Y}
+\toprule
+Pengaturan & Nilai\\
+\midrule
+Metode & \textit{Supervised learning}, bobot awal acak, tanpa bobot pralatih\\
+Loss & \textit{Cross-entropy}\\
+Optimizer & AdamW, \textit{learning rate} 0,001, \textit{weight decay} 0,0001\\
+Ukuran batch & 64 segmen\\
+Penyeimbangan kelas & \textit{Weighted random sampling} per kelas dan per generator\\
+Pemilihan model & Loss validasi terendah (\textit{model checkpointing})\\
+Penghentian & \textit{Early stopping}, \textit{patience} 5 epoch, maksimal 30 epoch\\
+Percepatan & \textit{Mixed precision} (AMP) di GPU Google Colab\\
+Agregasi & Rata-rata skor segmen; ambang keputusan 0,5 ditetapkan sebelum melihat data test\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Pelaksanaan di Google Colab}
+Notebook \kode{colab/train.ipynb} menjalankan pelatihan penuh di Google Colab. Pekerjaannya dibagi menjadi sesi CPU untuk menyiapkan fitur, yang dapat dicicil lintas sesi, dan sesi GPU untuk pelatihan. Tabel~\ref{tab:colab} memberi nama metode untuk setiap langkah notebook.
+
+{\singlespacing\small
+\begin{longtable}{L{0.5cm} L{2.4cm} L{5.0cm} L{3.9cm}}
+\caption{Langkah pemrosesan di Google Colab dan nama metodenya.}\label{tab:colab}\\
+\toprule
+No & Langkah & Yang dilakukan & Nama metode\\
+\midrule
+\endfirsthead
+\toprule
+No & Langkah & Yang dilakukan & Nama metode\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & Salin audio & Zip SONICS dan FMA disalin ke disk lokal Colab lalu diekstrak & Data acquisition\\
+2 & Pilih MUSEBENCH & Subset acak ber-seed, dikecilkan otomatis agar muat di disk; hanya file terpilih yang diunduh & Random sampling dengan seed; partial download (HTTP Range)\\
+3 & Beri label & Label dari folder asal data & Provenance-based labeling\\
+4 & Bagi data & Train/validation/test per kelompok & Grouped hold-out split\\
+5 & Buang duplikat & File dengan hash sama disimpan sekali & Exact deduplication\\
+6 & Dekode audio & Stereo jadi mono, resample 16 kHz & Downmixing dan resampling\\
+7 & Potong rekaman & Jendela 5 detik, potongan terakhir diisi nol & Fixed-length windowing, zero padding\\
+8 & Samakan kerasnya suara & RMS tiap jendela $-20$ dBFS & RMS loudness normalization\\
+9 & Augmentasi (train) & 3 versi codec acak per lagu untuk kedua kelas; diterapkan sebelum langkah 6--8 & Codec augmentation\\
+10 & Ekstraksi fitur & STFT 1024/hop 256, 64 filter Mel, dibatasi 0--7 kHz & Log-Mel spectrogram; band-limiting\\
+11 & Simpan cache & Fitur float16 per 100 lagu ke Google Drive, dapat dilanjutkan & Feature caching; checkpointed batch processing\\
+12 & Pelatihan & CNN, cross-entropy, AdamW, batch 64 & Mini-batch gradient descent\\
+13 & Seimbangkan kelas & Porsi sampel sama per kelas dan generator & Class-balanced sampling\\
+14 & Percepat di GPU & Perhitungan float16 otomatis & Mixed precision training\\
+15 & Pilih model & Simpan bobot terbaik; berhenti setelah 5 epoch tanpa perbaikan; dapat dilanjutkan & Model checkpointing; early stopping; resume training\\
+16 & Vonis satu lagu & Rata-rata skor segmen dibanding ambang 0,5 & Score aggregation; fixed decision threshold\\
+\end{longtable}}
+
+\section{Rancangan Evaluasi}\label{sec:rancangan-evaluasi}
+Model dievaluasi dengan tujuh langkah (Tabel~\ref{tab:evaluasi}) memakai metrik pada Persamaan~\eqref{eq:acc}--\eqref{eq:wilson}. Untuk uji \textit{robustness} dipakai dua metrik tambahan: \textit{mean} $|\Delta|$, yaitu rata-rata perubahan skor setelah lagu dikompres ulang, dan \textit{flip rate}, yaitu persentase lagu yang vonisnya berbalik. Model yang baik memiliki keduanya mendekati nol.
+
+{\singlespacing\small
+\begin{longtable}{L{0.5cm} L{2.6cm} L{4.4cm} L{4.3cm}}
+\caption{Langkah uji coba model dan nama metodenya.}\label{tab:evaluasi}\\
+\toprule
+No & Langkah uji & Pertanyaan yang dijawab & Nama metode\\
+\midrule
+\endfirsthead
+\toprule
+No & Langkah uji & Pertanyaan yang dijawab & Nama metode\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & Uji pada data test & Seberapa akurat model pada data yang belum pernah dipakai? & Hold-out test evaluation\\
+2 & Rincian per generator & Generator mana yang sulit dideteksi? & Disaggregated evaluation\\
+3 & Kompres ulang lagu test & Apakah vonis berubah hanya karena format file? & Robustness testing (MP3 32k, MP3 128k, AAC 128k, Opus 64k)\\
+4 & Lagu dari luar dataset & Apakah model berguna untuk lagu dari sumber lain? & Out-of-distribution evaluation\\
+5 & Generator ditahan dari training & Apakah model mengenali generator yang belum pernah dilihat? & Leave-one-generator-out\\
+6 & Matikan perbaikan satu per satu & Komponen mana yang paling berpengaruh? & Ablation study\\
+7 & Umpan balik pengguna & Seberapa sering model benar pada lagu sungguhan? & Field test; Wilson score interval\\
+\end{longtable}}
+
+\section{Rancangan Pengujian Perangkat Lunak}\label{sec:rancangan-pengujian}
+Aplikasi diuji dengan dua metode. \textit{Unit testing} dan \textit{integration testing} memakai pytest: 42 tes otomatis memeriksa antara lain augmentasi yang deterministik dan berlaku untuk kedua kelas, data validation/test yang tidak diaugmentasi, \textit{balanced sampler}, pembagian per kelompok tanpa kebocoran, deduplikasi, pemrosesan yang dicicil, lanjutan pelatihan, umpan balik, dan endpoint server. \textit{Black-box testing} menguji studio web hanya dari masukan dan keluarannya tanpa melihat kode \cite{myers2011art}; skenario dan hasilnya disajikan pada Subbab~\ref{sec:hasil-blackbox}.

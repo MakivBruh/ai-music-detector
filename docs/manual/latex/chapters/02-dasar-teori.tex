@@ -1,0 +1,113 @@
+\chapter{DASAR TEORI}
+
+\section{Musik AI dan Masyarakat}
+Detektor musik AI adalah salah satu cara menjaga transparansi atas karya yang dihasilkan generator, tetapi detektor bukan hakim. Tabel~\ref{tab:isu} merangkum isu yang muncul serta apa yang bisa dan tidak bisa dilakukan detektor.
+
+{\singlespacing\small
+\begin{longtable}{L{2.5cm} L{2.5cm} L{3.5cm} L{3.5cm}}
+\caption{Isu musik AI dan peran detektor.}\label{tab:isu}\\
+\toprule
+Isu & Pihak terdampak & Yang bisa dilakukan detektor & Yang tidak bisa\\
+\midrule
+\endfirsthead
+\toprule
+Isu & Pihak terdampak & Yang bisa dilakukan detektor & Yang tidak bisa\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Transparansi bagi pendengar & Pendengar, platform musik & Menandai lagu yang perlu diberi label atau diperiksa & Memberi label resmi atau menjamin kebenarannya\\
+Nafkah dan royalti musisi & Musisi, pencipta lagu, label & Memisahkan karya AI massal dari karya manusia dalam katalog & Menentukan pembagian royalti atau status hukum karya\\
+Hak cipta data latih generator & Musisi yang karyanya dipakai melatih AI & Mengenali bahwa sebuah lagu kemungkinan buatan AI & Menunjukkan karya siapa yang dipakai melatih generator\\
+Peniruan suara penyanyi & Penyanyi, penggemar & Menjadi penyaring awal rekaman mencurigakan & Mendeteksi vokal tiruan secara khusus\\
+Keaslian karya lomba dan sekolah & Peserta, juri, guru & Menyaring karya untuk ditinjau ulang & Membuktikan kecurangan tanpa bukti lain\\
+\end{longtable}}
+
+Klasifikasi audio bukan satu-satunya pendekatan. Tabel~\ref{tab:pendekatan} membandingkannya dengan watermark, metadata asal-usul, dan pernyataan pembuat. Keempatnya saling melengkapi; detektor audio paling berguna justru ketika watermark dan metadata tidak ada.
+
+\begin{table}[htbp]
+\centering
+\singlespacing\small
+\caption{Posisi klasifikasi audio di antara pendekatan lain.}
+\label{tab:pendekatan}
+\begin{tabularx}{\textwidth}{L{2.7cm} Y Y Y}
+\toprule
+Pendekatan & Cara kerja & Kelebihan & Kelemahan\\
+\midrule
+Klasifikasi audio (proyek ini) & Model belajar pola suara dari contoh lagu manusia dan AI & Tidak butuh kerja sama pembuat generator & Bisa salah; perlu dilatih ulang saat generator baru muncul\\
+Watermark & Generator menyisipkan tanda tak terdengar & Sangat akurat bila tandanya ada & Bergantung pada pembuat generator; bisa rusak saat audio diolah\\
+Metadata asal-usul (mis. C2PA) & Catatan asal karya disimpan di file & Menjelaskan siapa dan alat apa yang membuat karya & Mudah hilang saat file dikonversi\\
+Pernyataan pembuat & Pengunggah menyatakan penggunaan AI & Sederhana dan murah & Bergantung pada kejujuran pengunggah\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Kesalahan menyebut lagu manusia sebagai AI (salah tuduh) lebih merugikan daripada sebaliknya karena menyerang reputasi dan penghasilan pembuatnya. Musisi independen yang merekam dengan peralatan sederhana atau mengunggah MP3 berkualitas rendah paling berisiko terkena bias semacam ini. Generator AI juga terus membaik, sehingga detektor yang akurat hari ini dapat tertinggal bulan depan.
+
+\section{Representasi Audio: Spektrogram Log-Mel}
+Audio digital adalah deretan sampel amplitudo. Agar polanya dapat dipelajari CNN, audio diubah menjadi gambar dua dimensi berupa spektrogram. \textit{Short-Time Fourier Transform} (STFT) memecah sinyal menjadi potongan pendek (di sini 1024 sampel dengan lompatan 256 sampel) dan menghitung energi setiap frekuensi pada tiap potongan.
+
+Frekuensi kemudian dikelompokkan ke dalam 64 pita menurut skala Mel \cite{stevens1937scale}, yang meniru kepekaan telinga manusia: rapat di frekuensi rendah dan renggang di frekuensi tinggi. Hubungan frekuensi $f$ (Hz) dengan nilai Mel $m$ adalah
+\begin{equation}
+m = 2595 \log_{10}\!\left(1 + \frac{f}{700}\right).
+\label{eq:mel}
+\end{equation}
+Energi setiap pita lalu diubah ke skala desibel (logaritmik), sehingga diperoleh spektrogram log-Mel \cite{hershey2017cnn}. Ekstraksi fitur dilakukan dengan pustaka librosa \cite{mcfee2015librosa}.
+
+\section{Convolutional Neural Network}
+CNN adalah jaringan saraf yang mengenali pola lokal pada data berbentuk grid seperti gambar \cite{lecun1998gradient}. Lapisan konvolusi menggeser filter kecil (misalnya $3\times3$) di atas spektrogram untuk mendeteksi pola, fungsi aktivasi ReLU memberi sifat nonlinier, dan \textit{max-pooling} merangkum hasilnya. Dropout menonaktifkan sebagian neuron secara acak selama pelatihan untuk mengurangi \textit{overfitting} \cite{srivastava2014dropout}.
+
+Bobot jaringan diperbarui dengan \textit{mini-batch gradient descent} memakai optimizer AdamW, yaitu Adam dengan \textit{weight decay} yang dipisahkan dari pembaruan gradien \cite{loshchilov2019adamw}. Fungsi loss yang diperkecil adalah \textit{cross-entropy}. Pelatihan dihentikan lebih awal (\textit{early stopping}) bila loss validasi tidak membaik selama beberapa epoch \cite{prechelt1998early}, dan perhitungan di GPU dipercepat dengan \textit{mixed precision} \cite{micikevicius2018mixed}.
+
+\section{Shortcut Learning dan Data Leakage}
+\textit{Shortcut learning} terjadi ketika model memakai ciri yang kebetulan berkorelasi dengan label pada data latih, bukan ciri yang sebenarnya dicari \cite{geirhos2020shortcut}. Pada deteksi musik AI, ciri semacam itu dapat berupa kualitas file: jika semua lagu AI di data latih ber-\textit{bitrate} rendah, model bisa tampak sangat akurat padahal hanya membaca \textit{bitrate}, lalu gagal begitu kondisi file berubah. Mitigasinya adalah memutus korelasi tersebut, misalnya dengan augmentasi data yang membuat kedua kelas mengalami variasi yang sama \cite{salamon2017deep}.
+
+\textit{Data leakage} (kebocoran data) terjadi ketika informasi dari data test ikut masuk ke pelatihan \cite{kaufman2012leakage}. Contohnya, lagu asli berada di data latih sementara versi AI yang dibuat dari lagu itu berada di data test. Model lalu dinilai pada sesuatu yang hampir sudah dihafalnya, sehingga angka akhirnya terlalu optimis.
+
+\section{Pembagian Data: Hold-Out dan Cross-Validation}
+Metode \textit{hold-out} membagi data menjadi tiga bagian \cite{kohavi1995study}: \textit{train} untuk memperbarui bobot model, \textit{validation} untuk memilih model terbaik selama pelatihan, dan \textit{test} untuk mengukur kinerja akhir satu kali. \textit{K-fold cross-validation} melatih model $k$ kali dengan bagian test bergantian; hasilnya lebih stabil untuk data kecil, tetapi biayanya $k$ kali lipat. Varian \textit{leave-one-group-out} menahan satu kelompok, misalnya satu generator AI, khusus untuk test guna mengukur generalisasi ke domain baru \cite{gulrajani2021search}.
+
+Kelas yang tidak seimbang dapat membuat model condong ke kelas mayoritas \cite{he2009learning}. Salah satu penanganannya adalah \textit{weighted random sampling}, yaitu mengambil contoh dengan bobot berbanding terbalik terhadap jumlah anggota kelasnya.
+
+\section{Metrik Evaluasi}
+Dengan kelas AI sebagai kelas positif, hasil klasifikasi dirangkum dalam \textit{confusion matrix}: TP (AI terdeteksi AI), TN (manusia dikenali manusia), FP (manusia divonis AI), dan FN (AI divonis manusia). Dari keempatnya diturunkan
+\begin{align}
+\text{Accuracy} &= \frac{TP + TN}{TP + TN + FP + FN},\label{eq:acc}\\
+\text{Balanced accuracy} &= \frac{1}{2}\left(\frac{TP}{TP+FN} + \frac{TN}{TN+FP}\right),\label{eq:balacc}\\
+F_1 &= \frac{2 \cdot \text{presisi} \cdot \text{recall}}{\text{presisi} + \text{recall}}.\label{eq:f1}
+\end{align}
+\textit{Balanced accuracy} merata-ratakan recall kedua kelas sehingga tidak tertipu kelas mayoritas \cite{brodersen2010balanced}. \textit{Macro F1} adalah rata-rata $F_1$ kedua kelas. ROC AUC adalah luas di bawah kurva ROC, yaitu peluang lagu AI acak mendapat skor lebih tinggi daripada lagu manusia acak; nilai 0,5 berarti menebak dan 1 berarti sempurna \cite{fawcett2006introduction}.
+
+Ketahanan terhadap perubahan kondisi audio diukur dengan menguji ulang data yang sengaja diberi perturbasi \cite{hendrycks2019benchmarking}. Untuk sampel kecil, ketidakpastian akurasi $\hat{p}$ dari $n$ lagu dinyatakan dengan interval skor Wilson \cite{wilson1927probable}:
+\begin{equation}
+\frac{\hat{p} + \frac{z^2}{2n} \pm z\sqrt{\frac{\hat{p}(1-\hat{p})}{n} + \frac{z^2}{4n^2}}}{1 + \frac{z^2}{n}},\qquad z = 1{,}96 \text{ untuk 95\%}.
+\label{eq:wilson}
+\end{equation}
+
+\section{Penelitian dan Dataset Terkait}\label{sec:terkait}
+Tabel~\ref{tab:terkait} merangkum dataset dan penelitian deteksi musik AI yang menjadi rujukan proyek ini. Tautan lengkapnya tercantum pada Daftar Pustaka dan Lampiran~D.
+
+{\singlespacing\small
+\begin{longtable}{L{3.0cm} L{5.4cm} L{3.9cm}}
+\caption{Dataset dan penelitian deteksi musik AI yang terkait.}\label{tab:terkait}\\
+\toprule
+Rujukan & Isi singkat & Kaitan dengan proyek\\
+\midrule
+\endfirsthead
+\toprule
+Rujukan & Isi singkat & Kaitan dengan proyek\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+SONICS \cite{rahman2025sonics} & Dataset besar lagu Suno dan Udio dari prompt bertemplat, beserta lagu asli & Sumber utama lagu AI (20.000 lagu) dan pembagian data resminya\\
+FMA \cite{defferrard2017fma} & Dataset musik berlisensi Creative Commons untuk analisis musik & Sumber lagu manusia (FMA-small)\\
+MUSEBENCH \cite{musebench} & Benchmark lebih dari 361 ribu lagu: musik manusia dan sepuluh generator, ditambah varian terkompresi dan terganggu & Sumber lagu Jamendo, OOD FMA, dan enam generator tambahan\\
+FakeMusicCaps \cite{comanducci2024fakemusiccaps} & Caption MusicCaps yang dibuat ulang dengan beberapa model \textit{text-to-music} & Rujukan variasi generator selain Suno dan Udio\\
+Studi Suno v5 \cite{suno5robust} & 5.000 lagu Suno v5 dan 5.000 lagu FMA-small; detektor dasar turun tajam saat audio ditransformasi & Menegaskan pentingnya uji \textit{robustness}\\
+The AI Music Arms Race \cite{crosvila2025armsrace} & Lagu Suno, Udio, dan lagu non-AI; generalisasi lintas platform tidak simetris & Rujukan evaluasi generator yang tidak dilatih\\
+Echoes \cite{echoes2026} & Dataset \textit{music deepfake} yang selaras secara semantik & Rujukan dataset pembanding\\
+Hard-negative robustness \cite{hardnegative2026} & Memakai versi lagu yang diedit sebagai contoh negatif yang sulit & Rujukan uji ketahanan terhadap penyuntingan audio\\
+Broadcast monitoring \cite{broadcast2026} & Evaluasi deteksi musik AI pada pemantauan siaran nyata & Rujukan pemakaian di dunia nyata\\
+Stem-agnostic hybrid detection \cite{stemagnostic2026} & Deteksi lagu campuran manusia dan AI tanpa bergantung pada pemisahan \textit{stem} & Rujukan pengembangan kelas lagu campuran\\
+\end{longtable}}

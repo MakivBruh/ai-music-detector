@@ -1,0 +1,17 @@
+\chapter{PENUTUP}
+
+\section{Kesimpulan}
+\begin{enumerate}
+\item Aplikasi \textit{AI Music Detector} berhasil dibangun sebagai studio web lokal yang menganalisis rekaman musik tanpa mengirim audio ke layanan luar. Setiap vonis disertai skor per segmen 5 detik dan spektrogram yang dilihat model.
+\item \textit{Shortcut learning} terhadap codec dicegah dengan augmentasi codec untuk kedua kelas, normalisasi loudness, dan pembatasan spektrogram sampai 7 kHz. Studi ablasi menunjukkan pembatasan 7 kHz adalah komponen kunci: tanpanya, vonis masih berbalik pada separuh lagu yang dikompres ulang.
+\item Model final mencapai akurasi 86,5\%, \textit{balanced accuracy} 88,9\%, dan ROC AUC 0,966 pada 3.911 lagu test, dengan salah tuduh hanya 3,5\%. Pada kompresi ulang, akurasinya bertahan di 86--88\% dan hanya 5\% vonis yang berbalik.
+\item Kelemahan utama ada pada generator yang tidak ada di data latih: udio-30s hanya terdeteksi 35,1\%, meskipun dua versi Suno yang juga tidak dilatih tetap terdeteksi sekitar 99\%.
+\end{enumerate}
+
+\section{Saran}
+\begin{enumerate}
+\item Menambah contoh lagu dari generator terbaru, terutama Udio dan Suno versi baru, lalu melatih ulang model memakai cache tambahan tanpa memproses ulang seluruh data.
+\item Menjalankan evaluasi \textit{leave-one-generator-out} untuk setiap generator agar kemampuan generalisasi terukur lebih lengkap.
+\item Mengumpulkan umpan balik pengguna pada lagu yang asal-usulnya jelas sebagai uji lapangan, dengan sebagian lagu disisihkan khusus untuk evaluasi.
+\item Mengkalibrasi ambang keputusan dan mengulang \textit{black-box testing} memakai model final.
+\end{enumerate}

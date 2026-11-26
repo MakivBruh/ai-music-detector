@@ -1,0 +1,66 @@
+% Aturan format; tidak perlu diubah saat hanya mengisi laporan.
+\usepackage[left=4cm,right=3cm,top=3cm,bottom=3cm]{geometry}
+\usepackage{fontspec}
+% Gunakan LuaLaTeX atau XeLaTeX, bukan pdfLaTeX.
+\IfFontExistsTF{Times New Roman}
+  {\setmainfont{Times New Roman}}
+  {\setmainfont{TeX Gyre Termes}}
+\IfFontExistsTF{Consolas}
+  {\setmonofont[Scale=0.9]{Consolas}}
+  {}
+\usepackage{amsmath,amssymb,graphicx,booktabs,array,tabularx,longtable}
+% Tambahan untuk buku manual: diagram, grafik, kode, tautan panjang.
+\usepackage{tikz,pgfplots,fancyvrb,xcolor}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\pgfplotsset{compat=1.18}
+\usepackage{xurl}
+\usepackage{setspace,indentfirst,titlesec,caption,float,placeins,enumitem}
+% BibTeX menangani references.bib; gaya sitasi angka sesuai urutan kutipan.
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+\addbibresource{references.bib}
+\usepackage[hidelinks]{hyperref}
+\onehalfspacing
+\setlength{\parindent}{1cm}
+\setlength{\parskip}{0pt}
+\setlength{\emergencystretch}{2em}
+\raggedbottom
+\pagestyle{plain}
+\setlist{leftmargin=0.8cm,topsep=6pt,itemsep=3pt,parsep=0pt}
+\renewcommand{\chaptername}{BAB}
+\renewcommand{\contentsname}{DAFTAR ISI}
+\renewcommand{\listfigurename}{DAFTAR GAMBAR}
+\renewcommand{\listtablename}{DAFTAR TABEL}
+\renewcommand{\figurename}{Gambar}
+\renewcommand{\tablename}{Tabel}
+\renewcommand{\bibname}{DAFTAR PUSTAKA}
+\renewcommand{\thechapter}{\Roman{chapter}}
+\renewcommand{\thesection}{\arabic{chapter}.\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thefigure}{\arabic{chapter}.\arabic{figure}}
+\renewcommand{\thetable}{\arabic{chapter}.\arabic{table}}
+\renewcommand{\theequation}{\arabic{chapter}.\arabic{equation}}
+\setcounter{tocdepth}{2}
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\centering\singlespacing\fontsize{14}{18}\selectfont}
+  {BAB \thechapter}{5pt}{}
+\titleformat{\section}{\normalfont\normalsize\bfseries}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.7em}{}
+\titlespacing{\chapter}{0pt}{0pt}{24pt}
+\titlespacing{\section}{0pt}{14pt}{6pt}
+\titlespacing{\subsection}{0pt}{10pt}{4pt}
+\DeclareCaptionFont{ukcaption}{\fontsize{10}{12}\selectfont}
+\captionsetup{font={ukcaption,singlespacing},skip=6pt}
+\graphicspath{{figures/}}
+% Kode dan perintah: \kode{...} untuk teks pendek (garis bawah ditulis \_),
+% lingkungan Perintah untuk blok perintah yang disalin apa adanya.
+\newcommand{\kode}[1]{\texttt{#1}}
+\DefineVerbatimEnvironment{Perintah}{Verbatim}
+  {fontsize=\small,frame=single,framesep=2mm,rulecolor=\color{black!35},baselinestretch=1}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\setlength{\LTpre}{6pt}
+\setlength{\LTpost}{6pt}
+\definecolor{abu}{HTML}{8A8F98}
+\definecolor{aksen}{HTML}{2A78D6}
+\definecolor{garis}{HTML}{B9C0C9}
+

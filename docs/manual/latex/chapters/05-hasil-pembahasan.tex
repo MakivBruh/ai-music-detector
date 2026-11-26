@@ -1,0 +1,200 @@
+\chapter{HASIL DAN PEMBAHASAN}
+
+\section{Data dan Pelatihan Model Final}
+Model final (\kode{hmf-aug-v2}) dilatih dengan 35.766 lagu (Tabel~\ref{tab:data-final}). Pelatihan berjalan 30 epoch di GPU Google Colab dan dilanjutkan dari epoch 8 setelah sesi terputus. Epoch 27 dipilih karena loss validasinya terendah, yaitu 0,184 (Gambar~\ref{fig:loss}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing\small
+\caption{Pembagian data model final.}
+\label{tab:data-final}
+\begin{tabular}{lrrrr}
+\toprule
+Bagian & Lagu & Manusia & AI & Segmen 5 detik\\
+\midrule
+Train & 28.587 (79,9\%) & 8.198 & 20.389 & 508.188\textsuperscript{a}\\
+Validation & 3.268 (9,1\%) & 2.158 & 1.110 & 19.237\\
+Test & 3.911 (10,9\%) & 1.330 & 2.581 & 23.083\\
+\midrule
+Total & 35.766 & 11.686 & 24.080 & \\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize \textsuperscript{a} Termasuk 3 versi augmentasi codec per lagu.}
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=12.5cm, height=6.5cm,
+  xmin=1, xmax=30, ymin=0, ymax=0.45,
+  xtick={1,5,10,15,20,25,30},
+  ytick={0,0.1,0.2,0.3,0.4},
+  yticklabel style={/pgf/number format/.cd, use comma, fixed, precision=1},
+  xlabel={Epoch}, ylabel={Loss},
+  axis lines*=left, grid=major, grid style={black!8},
+  legend style={draw=none, font=\small, at={(0.98,0.95)}, anchor=north east},
+  tick label style={font=\small}, label style={font=\small}]
+\addplot[thick, color=black!55] coordinates {(1,0.4317) (2,0.2678) (3,0.2104) (4,0.1775) (5,0.1576) (6,0.1430) (7,0.1326) (8,0.1226) (9,0.1182) (10,0.1111) (11,0.1058) (12,0.1032) (13,0.0980) (14,0.0951) (15,0.0923) (16,0.0898) (17,0.0865) (18,0.0852) (19,0.0822) (20,0.0813) (21,0.0791) (22,0.0775) (23,0.0757) (24,0.0744) (25,0.0739) (26,0.0718) (27,0.0699) (28,0.0687) (29,0.0688) (30,0.0666)};
+\addlegendentry{Loss train}
+\addplot[thick, color=aksen] coordinates {(1,0.3987) (2,0.3453) (3,0.3044) (4,0.3035) (5,0.2668) (6,0.2742) (7,0.2534) (8,0.2428) (9,0.2457) (10,0.2342) (11,0.2394) (12,0.2585) (13,0.2457) (14,0.2504) (15,0.2188) (16,0.2251) (17,0.2197) (18,0.2459) (19,0.2117) (20,0.2162) (21,0.2266) (22,0.2061) (23,0.2184) (24,0.1986) (25,0.1866) (26,0.2011) (27,0.1839) (28,0.2055) (29,0.1896) (30,0.1973)};
+\addlegendentry{Loss validasi}
+\addplot[only marks, mark=*, mark size=2.6pt, color=aksen, forget plot] coordinates {(27,0.1839)};
+\node[font=\footnotesize, anchor=south] at (axis cs:27,0.192) {epoch terpilih};
+\end{axis}
+\end{tikzpicture}
+\caption{Loss train dan validasi per epoch model final; titik menandai epoch 27 yang dipilih.}
+\label{fig:loss}
+\end{figure}
+
+\section{Hasil Hold-Out Test}
+Pada 3.911 lagu test, model final mencapai akurasi 86,5\% dan ROC AUC 0,966 (Tabel~\ref{tab:test}). Salah tuduh jarang terjadi: hanya 47 dari 1.330 lagu manusia (3,5\%) divonis AI (Tabel~\ref{tab:confusion}). Hampir semua kesalahan adalah lagu AI yang lolos sebagai manusia.
+
+\begin{table}[htbp]
+\centering
+\singlespacing\small
+\caption{Hasil hold-out test model final.}
+\label{tab:test}
+\begin{tabular}{lr}
+\toprule
+Metrik & Nilai\\
+\midrule
+Accuracy & 86,5\%\\
+Balanced accuracy & 88,9\%\\
+Macro F1 & 0,859\\
+ROC AUC & 0,966\\
+Recall manusia (lagu manusia benar dikenali) & 96,5\% (1.283 dari 1.330)\\
+Recall AI (lagu AI terdeteksi) & 81,4\% (2.101 dari 2.581)\\
+Presisi AI (vonis AI yang memang AI) & 97,8\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\singlespacing\small
+\caption{Confusion matrix model final pada data test.}
+\label{tab:confusion}
+\begin{tabular}{lrr}
+\toprule
+Asal lagu sebenarnya & Divonis human & Divonis AI\\
+\midrule
+Manusia & 1.283 & 47\\
+AI & 480 & 2.101\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Recall per Generator}
+Semua generator terdeteksi minimal 91\%, kecuali udio-30s yang hanya 35,1\% (Gambar~\ref{fig:per-generator}). Tanpa udio-30s, recall AI naik menjadi 98,5\% (1.857 dari 1.886 lagu). Generator udio-30s, chirp-v3, dan chirp-v2-xxl-alpha sama sekali tidak ada di data train dan hanya muncul di validation dan test. Dua versi Suno itu tetap terdeteksi sekitar 99\%, tetapi udio-30s tidak. Artinya, model dapat mengenali versi baru dari generator yang sudah dikenalnya, tetapi tidak selalu. Inilah batasan generalisasi yang paling penting.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, bar width=9pt, bar shift=0pt, y=0.72cm,
+  xmin=0, xmax=118, xtick={0,25,50,75,100},
+  ytick={1,...,11},
+  yticklabels={udio-30s\,*, stable\_audio, jasco, udio-120s, magenta, audioldm, chirp-v2-xxl-alpha\,*, riffusion, chirp-v3\,*, chirp-v3.5, musicgen},
+  xlabel={Recall pada data test (\%)},
+  axis x line*=bottom, axis y line*=left,
+  enlarge y limits=0.05, width=10.4cm,
+  tick label style={font=\small}, label style={font=\small},
+  clip=false]
+\addplot[fill=black!35, draw=none] coordinates {
+  (91.3,2) (93.4,3) (97.9,4) (98.0,5) (98.0,6) (98.9,7) (98.9,8) (99.8,9) (100,10) (100,11)};
+\addplot[fill=aksen, draw=none] coordinates {(35.1,1)};
+\foreach \x/\y/\t in {35.1/1/{35,1\% (244/695)}, 91.3/2/{91,3\% (95/104)}, 93.4/3/{93,4\% (85/91)},
+  97.9/4/{97,9\% (238/243)}, 98.0/5/{98,0\% (96/98)}, 98.0/6/{98,0\% (97/99)},
+  98.9/7/{98,9\% (266/269)}, 98.9/8/{98,9\% (89/90)}, 99.8/9/{99,8\% (558/559)},
+  100/10/{100\% (234/234)}, 100/11/{100\% (99/99)}}
+  {\edef\temp{\noexpand\node[anchor=west, font=\noexpand\footnotesize, inner sep=2pt] at (axis cs:\x,\y) {\unexpanded\expandafter{\t}};}\temp}
+\end{axis}
+\end{tikzpicture}
+\caption{Recall per generator pada data test model final; tanda * berarti generator tidak ada di data train.}
+\label{fig:per-generator}
+\end{figure}
+
+\section{Uji Robustness terhadap Kompresi Ulang}
+Uji \textit{robustness} memakai 200 lagu test (100 per kelas) yang dikompres ulang dengan empat format, lalu membandingkan vonis model final sebelum dan sesudah kompresi (Tabel~\ref{tab:robust}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing\small
+\caption{Hasil uji robustness model final.}
+\label{tab:robust}
+\begin{tabular}{lccc}
+\toprule
+Kondisi & Akurasi & Flip rate & Mean $|\Delta|$ skor\\
+\midrule
+Asli (clean) & 88,5\% & -- & --\\
+MP3 32 kbps mono 16 kHz & 86,5\% & 5,0\% & 0,055\\
+MP3 128 kbps & 88,0\% & 0,5\% & 0,012\\
+AAC 128 kbps & 88,0\% & 0,5\% & 0,016\\
+Opus 64 kbps & 86,0\% & 3,5\% & 0,035\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Akurasi model final bertahan di 86--88\% pada semua kondisi, dengan ROC AUC 0,959 pada file asli. Kondisi terberat, MP3 32 kbps mono 16 kHz, hanya menurunkan akurasi 2 poin dan membalik 5\% vonis; rata-rata perubahan skor hanya 0,055. Pada MP3 dan AAC 128 kbps, skor hampir tidak bergeser. Artinya, vonis model ditentukan oleh isi musik, bukan oleh format atau kualitas file.
+
+\section{Studi Ablasi}
+Studi ablasi menambahkan perbaikan satu per satu untuk melihat peran masing-masing. Percobaan dilakukan dalam skala kecil, yaitu 1.000 lagu dengan 2 epoch di CPU dan 20 lagu test per kelas (Tabel~\ref{tab:ablasi}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing\small
+\caption{Studi ablasi skala kecil.}
+\label{tab:ablasi}
+\begin{tabularx}{\textwidth}{Y L{2.5cm} L{1.4cm} L{2.0cm} L{1.6cm}}
+\toprule
+Model & Skor manusia: asli $\rightarrow$ MP3 32k & Flip MP3 32k & $|\Delta|$ kondisi terburuk & Akurasi asli\\
+\midrule
+Tanpa augmentasi & 0,00 $\rightarrow$ 1,00 & 50\% & 0,501 & 100\%\\
+Augmentasi tanpa \kode{--fmax} & 0,04 $\rightarrow$ 0,91 & 50\% & 0,442 & 100\%\\
+Augmentasi dan \kode{--fmax 7000} & 0,33 $\rightarrow$ 0,33 & 0\% & 0,008 & 77,5\%\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Augmentasi saja belum cukup: vonis tetap berbalik pada 50\% lagu. Baru setelah spektrogram dibatasi sampai 7 kHz, skor tidak lagi berubah oleh codec. Akurasi 100\% pada dua baris pertama berasal dari petunjuk kualitas file, sehingga langsung runtuh begitu lagu manusia dikompres. Angka akurasi pada tabel ini berasal dari model kecil 2 epoch; yang dibaca adalah polanya.
+
+\section{Hasil Pengujian Perangkat Lunak}\label{sec:hasil-blackbox}
+Seluruh 42 tes otomatis pytest lulus. Hasil \textit{black-box testing} studio web disajikan pada Tabel~\ref{tab:blackbox}. Skenario ini menguji perilaku aplikasi, bukan akurasi model.
+
+{\singlespacing\small
+\begin{longtable}{L{0.5cm} L{2.3cm} L{3.2cm} L{4.4cm} L{1.2cm}}
+\caption{Hasil black-box testing studio web.}\label{tab:blackbox}\\
+\toprule
+No & Skenario & Masukan & Hasil yang diharapkan & Hasil\\
+\midrule
+\endfirsthead
+\toprule
+No & Skenario & Masukan & Hasil yang diharapkan & Hasil\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & Membuka studio & Buka \url{http://127.0.0.1:8765} & Halaman tampil dengan nama model aktif & Sesuai\\
+2 & Analisis lagu & MP3 2 menit & Vonis, skor AI, spektrogram, dan 24 batang skor segmen tampil & Sesuai\\
+3 & Kecocokan skor & Lagu yang sama & Persentase di layar sama dengan \kode{ai\_score} di JSON & Sesuai\\
+4 & File bukan audio & File teks & Pesan ``Audio gagal dibaca'' & Sesuai\\
+5 & Port sudah dipakai & Studio kedua di port yang sama & Server menolak berjalan dan menyarankan port lain & Sesuai\\
+6 & Simpan umpan balik & Tandai vonis salah, pilih sumber label, simpan audio & Umpan balik tersimpan; panel uji lapangan bertambah & Sesuai\\
+7 & Audio berbeda & File lain dikirim sebagai audio umpan balik & Ditolak dengan pesan ``File berbeda dari lagu yang dianalisis'' & Sesuai\\
+8 & Tampilan ponsel & Lebar layar 375 piksel & Semua bagian tersusun satu kolom tanpa geser ke samping & Sesuai\\
+\end{longtable}}
+
+\section{Pembahasan dan Keterbatasan}
+Hasil di atas menjawab rumusan masalah. Detektor tidak bergantung pada format file: vonisnya stabil pada empat kondisi kompresi ulang. Akurasi test 86,5\% dengan ROC AUC 0,966 mencerminkan kemampuan yang sebenarnya karena data latih sudah diaugmentasi dan dibatasi sampai 7 kHz, sehingga petunjuk codec tidak bisa dipakai. Model juga berhati-hati: hanya 3,5\% lagu manusia yang salah dituduh AI. Hasil deteksi disajikan secara transparan melalui skor per segmen, spektrogram, dan panel model.
+
+Keterbatasan yang perlu diperhatikan:
+\begin{itemize}
+\item Model hanya mengenali pola yang ada di data latih. Generator yang belum pernah dilihat, seperti udio-30s, dapat lolos sebagai manusia.
+\item Ambang 0,5 belum dikalibrasi; skor 51\% tidak berarti peluang 51\% bahwa lagu itu buatan AI.
+\item Spektrogram hanya sampai 7 kHz, sehingga artefak AI di frekuensi tinggi tidak terlihat oleh model.
+\item Lagu campuran manusia dan AI belum menjadi kelas tersendiri.
+\item Sebagian besar kesalahan adalah lagu AI yang lolos sebagai manusia (480 dari 2.581 lagu AI), terutama dari udio-30s.
+\end{itemize}
+
+Hasil studio tidak boleh dipakai sebagai satu-satunya dasar untuk menuduh seseorang memakai AI. Skor sebaiknya dilaporkan sebagai perkiraan bersama nama model dan grafik per segmen, serta digabungkan dengan bukti lain seperti file proyek atau rekaman sesi.

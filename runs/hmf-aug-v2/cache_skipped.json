@@ -1,0 +1,20 @@
+[
+  {
+    "path": "/content/work/data/fma_small/fma_small/099/099134.mp3",
+    "split": "train",
+    "label": "0",
+    "error": "Command '['/usr/local/lib/python3.13/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2', '-nostdin', '-v', 'error', '-y', '-i', '/content/work/data/fma_small/fma_small/099/099134.mp3', '-map', '0:a:0', '-map_metadata', '-1', '-t', '30.0', '-af', 'volume=-5.05dB,lowpass=f=6300,aresample=16000', '-ac', '2', '-c:a', 'aac', '-ar', '16000', '-b:a', '96k', '/tmp/hmf-audio-yizwe9f8/encoded.m4a']' returned non-zero exit status 183."
+  },
+  {
+    "path": "/content/work/data/fma_small/fma_small/108/108925.mp3",
+    "split": "train",
+    "label": "0",
+    "error": "Command '['/usr/local/lib/python3.13/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2', '-nostdin', '-v', 'error', '-y', '-i', '/content/work/data/fma_small/fma_small/108/108925.mp3', '-map', '0:a:0', '-map_metadata', '-1', '-t', '30.0', '-af', 'volume=-1.4dB,aresample=24000', '-ac', '1', '-c:a', 'aac', '-ar', '24000', '-b:a', '128k', '/tmp/hmf-audio-6augpjg_/encoded.m4a']' returned non-zero exit status 183."
+  },
+  {
+    "path": "/content/work/data/fma_small/fma_small/133/133297.mp3",
+    "split": "train",
+    "label": "0",
+    "error": "Command '['/usr/local/lib/python3.13/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2', '-nostdin', '-v', 'error', '-y', '-i', '/content/work/data/fma_small/fma_small/133/133297.mp3', '-map', '0:a:0', '-map_metadata', '-1', '-t', '30.0', '-af', 'volume=2.42dB,lowpass=f=6900,aresample=16000', '-ac', '1', '-c:a', 'libmp3lame', '-ar', '16000', '-b:a', '256k', '/tmp/hmf-audio-61p19_gg/encoded.mp3']' returned non-zero exit status 183."
+  }
+]
